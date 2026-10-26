@@ -13,6 +13,7 @@ import {
   SpeedControl,
 } from "./Controls";
 import { DimensionsControl } from "./DimensionsControl";
+import { EngineControl } from "./EngineControl";
 import { TrimControl } from "./TrimControl";
 import styles from "./Drawer.module.css";
 
@@ -33,6 +34,8 @@ interface AdvancedDrawerProps {
   outputName: string;
   /** Lock the controls (while converting). */
   locked: boolean;
+  multiThreadSupported: boolean;
+  engineNotice: string | null;
 }
 
 export function AdvancedDrawer(props: AdvancedDrawerProps) {
@@ -89,6 +92,12 @@ export function AdvancedDrawer(props: AdvancedDrawerProps) {
               <AudioControl {...control} />
               <SpeedControl {...control} />
               <RotateControl {...control} />
+              <EngineControl
+                enabled={props.settings.multiThread}
+                onChange={(multiThread) => props.update({ multiThread })}
+                supported={props.multiThreadSupported}
+                notice={props.engineNotice}
+              />
             </div>
 
             <CommandBlock args={props.commandArgs} inputName={props.inputName} outputName={props.outputName} />

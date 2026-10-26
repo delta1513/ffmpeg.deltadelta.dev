@@ -209,6 +209,23 @@
   }
 }
 
+.stall {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 179, 92, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 179, 92, 0.3);
+  color: #ffd9a8;
+  font-size: 0.88rem;
+}
+
+.stall svg {
+  flex: none;
+}
+
 .progressFoot {
   display: flex;
   align-items: center;

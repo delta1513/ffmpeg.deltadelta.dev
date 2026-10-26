@@ -35,6 +35,8 @@ export interface Settings {
   audioOnlyBitrate: number;
   speed: EncodingSpeed;
   rotate: Rotation;
+  /** Use the experimental multi-thread FFmpeg core (needs a cross-origin-isolated page). */
+  multiThread: boolean;
 }
 
 /** Trim range in seconds. Not persisted: it belongs to one file. */
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   audioOnlyBitrate: 192,
   speed: "fast",
   rotate: 0,
+  multiThread: false,
 };
 
 // ---------------------------------------------------------------------------
@@ -124,6 +127,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     audioOnlyBitrate: pick(o.audioOnlyBitrate, AUDIO_BITRATES, d.audioOnlyBitrate),
     speed: pick(o.speed, ["fastest", "fast", "balanced", "smallest"] as const, d.speed),
     rotate: pick(o.rotate, [0, 90, 180, 270] as const, d.rotate),
+    multiThread: typeof o.multiThread === "boolean" ? o.multiThread : d.multiThread,
   };
 }
 
@@ -145,6 +149,7 @@ export function countChanged(s: Settings): number {
     s.audioOnlyBitrate !== d.audioOnlyBitrate,
     s.speed !== d.speed,
     s.rotate !== d.rotate,
+    s.multiThread !== d.multiThread,
   ].filter(Boolean).length;
 }
 

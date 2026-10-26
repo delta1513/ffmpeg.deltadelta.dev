@@ -1,34 +1,81 @@
 /**
- * The FFmpeg engine: downloads the single-thread core from a CDN, runs it in
+ * The FFmpeg engine: downloads an FFmpeg core from a CDN, runs it in
  * ffmpeg.wasm's worker, and serialises every job (probe / convert) through
- * one queue. Browser-only at call time; safe to import during prerender
- * because @ffmpeg/* is only loaded with dynamic import().
+ * one queue. Two cores are supported:
+ *
+ * - "st": the single-thread core (default, most stable).
+ * - "mt": the multi-thread core. Needs SharedArrayBuffer, i.e. a
+ *   cross-origin-isolated page (COOP/COEP headers). Falls back to "st" if it
+ *   can't start.
+ *
+ * Browser-only at call time; safe to import during prerender because
+ * @ffmpeg/* is only loaded with dynamic import().
  */
 import type { FFmpeg, FFFSType } from "@ffmpeg/ffmpeg";
+import { withThreadLimit } from "./ffmpeg-args";
 import { safeExtension } from "./formats";
 import type { SourceMeta } from "./settings";
 
+export type EngineMode = "st" | "mt";
+
 const CORE_VERSION = "0.12.10";
-const CDN_BASES = [
-  `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/umd`,
-  `https://unpkg.com/@ffmpeg/core@${CORE_VERSION}/dist/umd`,
+
+interface CoreFile {
+  name: string;
+  mime: string;
+  /** Decoded size. CDNs serve these compressed, so Content-Length can't be used for progress. */
+  bytes: number;
+}
+
+const CORES: Record<EngineMode, { pkg: string; files: CoreFile[] }> = {
+  st: {
+    pkg: "core",
+    files: [
+      { name: "ffmpeg-core.js", mime: "text/javascript", bytes: 112_059 },
+      { name: "ffmpeg-core.wasm", mime: "application/wasm", bytes: 32_232_419 },
+    ],
+  },
+  mt: {
+    pkg: "core-mt",
+    files: [
+      { name: "ffmpeg-core.js", mime: "text/javascript", bytes: 129_115 },
+      { name: "ffmpeg-core.wasm", mime: "application/wasm", bytes: 32_718_323 },
+      { name: "ffmpeg-core.worker.js", mime: "text/javascript", bytes: 2_213 },
+    ],
+  },
+};
+
+const cdnBases = (pkg: string) => [
+  `https://cdn.jsdelivr.net/npm/@ffmpeg/${pkg}@${CORE_VERSION}/dist/umd`,
+  `https://unpkg.com/@ffmpeg/${pkg}@${CORE_VERSION}/dist/umd`,
 ];
-/** Decoded sizes. CDNs serve the files compressed, so Content-Length can't be used for progress. */
-const CORE_JS_BYTES = 112_059;
-const CORE_WASM_BYTES = 32_232_419;
-export const CORE_TOTAL_BYTES = CORE_JS_BYTES + CORE_WASM_BYTES;
+
+const totalBytes = (mode: EngineMode) => CORES[mode].files.reduce((n, f) => n + f.bytes, 0);
 
 const INPUT_DIR = "/in";
 const LOG_LIMIT = 400;
+/** The multi-thread core spins up a pool of 32 workers; give up on it after this. */
+const MT_LOAD_TIMEOUT_MS = 45_000;
+/** Threads per stage for the multi-thread core (verified to fit its 32-worker pool). */
+const MT_THREADS = 4;
+/** No log or progress output for this long during a multi-thread run counts as a stall. */
+const STALL_MS = 30_000;
+
+export const MT_FALLBACK_NOTICE =
+  "The multi-threaded engine couldn’t start in this browser, so the standard engine is being used.";
 
 export type EnginePhase = "idle" | "downloading" | "initializing" | "ready" | "error";
 
 export interface EngineState {
   phase: EnginePhase;
+  /** The core being loaded or in use. */
+  mode: EngineMode;
   /** Bytes of the core downloaded so far. */
   received: number;
   total: number;
   error: string | null;
+  /** Set when the multi-thread core failed and the engine fell back to single-thread. */
+  notice: string | null;
 }
 
 export class ConversionError extends Error {
@@ -43,7 +90,7 @@ export class ConversionError extends Error {
 
 export class CancelledError extends Error {
   constructor() {
-    super("Conversion cancelled");
+    super("Cancelled");
     this.name = "CancelledError";
   }
 }
@@ -56,6 +103,8 @@ export interface ConvertJob {
   /** Output length in seconds, used to compute progress. */
   expectedDuration?: number;
   onProgress: (ratio: number) => void;
+  /** Multi-thread only: called with true when output stops for a while, false when it resumes. */
+  onStall?: (stalled: boolean) => void;
 }
 
 interface StagedInput {
@@ -66,6 +115,7 @@ interface StagedInput {
 interface CoreURLs {
   coreURL: string;
   wasmURL: string;
+  workerURL?: string;
 }
 
 async function downloadToBlobURL(
@@ -100,17 +150,49 @@ export function parseLogTime(line: string): number | null {
   return Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
 }
 
-const INITIAL_STATE: EngineState = { phase: "idle", received: 0, total: CORE_TOTAL_BYTES, error: null };
+/** True when this page can run the multi-thread core. */
+export function multiThreadSupported(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.crossOriginIsolated === true &&
+    typeof SharedArrayBuffer !== "undefined"
+  );
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(
+      (v) => (clearTimeout(t), resolve(v)),
+      (e) => (clearTimeout(t), reject(e)),
+    );
+  });
+}
+
+const INITIAL_STATE: EngineState = {
+  phase: "idle",
+  mode: "st",
+  received: 0,
+  total: totalBytes("st"),
+  error: null,
+  notice: null,
+};
 
 export class Engine {
   private state: EngineState = INITIAL_STATE;
   private listeners = new Set<() => void>();
   private ffmpeg: FFmpeg | null = null;
   private loading: Promise<FFmpeg> | null = null;
-  private urls: CoreURLs | null = null;
+  private urls = new Map<EngineMode, CoreURLs>();
+  /** The mode the person asked for. */
+  private wanted: EngineMode = "st";
+  /** The multi-thread core failed; stay on single-thread until the mode is changed. */
+  private mtFailed = false;
+  /** Bumped whenever the running instance is discarded, so stale loads don't install themselves. */
+  private generation = 0;
   private queue: Promise<unknown> = Promise.resolve();
   private logs: string[] = [];
-  private onLogTime: ((seconds: number) => void) | null = null;
+  private onActivity: ((line: string | null) => void) | null = null;
   private lastNotify = 0;
 
   static readonly SERVER_STATE: EngineState = INITIAL_STATE;
@@ -135,11 +217,35 @@ export class Engine {
     this.listeners.forEach((l) => l());
   }
 
+  private get effectiveMode(): EngineMode {
+    return this.wanted === "mt" && !this.mtFailed && multiThreadSupported() ? "mt" : "st";
+  }
+
+  /**
+   * Choose the core. A change discards the current instance; the new core
+   * loads lazily on the next load() (file chosen or conversion started).
+   * Callers must not switch while a conversion runs.
+   */
+  setMode(mode: EngineMode) {
+    if (mode === this.wanted) return;
+    this.wanted = mode;
+    this.mtFailed = false;
+    this.discard();
+    this.setState({
+      phase: "idle",
+      mode: this.effectiveMode,
+      received: 0,
+      total: totalBytes(this.effectiveMode),
+      error: null,
+      notice: null,
+    });
+  }
+
   /** Load the engine (idempotent). Resolves once FFmpeg is ready. */
   load(): Promise<FFmpeg> {
     if (this.ffmpeg && this.state.phase === "ready") return Promise.resolve(this.ffmpeg);
     if (!this.loading) {
-      const attempt = this.doLoad();
+      const attempt = this.doLoad(++this.generation);
       this.loading = attempt;
       attempt.catch(() => {
         if (this.loading === attempt) this.loading = null;
@@ -148,22 +254,25 @@ export class Engine {
     return this.loading;
   }
 
-  private async fetchCore(): Promise<CoreURLs> {
-    if (this.urls) return this.urls;
+  private async fetchCore(mode: EngineMode, gen: number): Promise<CoreURLs> {
+    const cached = this.urls.get(mode);
+    if (cached) return cached;
+    const { pkg, files } = CORES[mode];
+    const total = totalBytes(mode);
     let lastError: unknown;
-    for (const base of CDN_BASES) {
-      let js = 0;
-      let wasm = 0;
-      const report = () => this.setState({ received: Math.min(js + wasm, CORE_TOTAL_BYTES) }, true);
+    for (const base of cdnBases(pkg)) {
+      const got = files.map(() => 0);
+      const report = () => {
+        if (gen === this.generation) this.setState({ received: Math.min(got.reduce((a, b) => a + b, 0), total) }, true);
+      };
       try {
-        this.setState({ phase: "downloading", received: 0, error: null });
-        const [coreURL, wasmURL] = await Promise.all([
-          downloadToBlobURL(`${base}/ffmpeg-core.js`, "text/javascript", (n) => ((js = n), report())),
-          downloadToBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm", (n) => ((wasm = n), report())),
-        ]);
-        this.urls = { coreURL, wasmURL };
-        this.setState({ received: CORE_TOTAL_BYTES });
-        return this.urls;
+        this.setState({ phase: "downloading", mode, received: 0, total, error: null });
+        const blobs = await Promise.all(
+          files.map((f, i) => downloadToBlobURL(`${base}/${f.name}`, f.mime, (n) => ((got[i] = n), report()))),
+        );
+        const urls: CoreURLs = { coreURL: blobs[0], wasmURL: blobs[1], workerURL: blobs[2] };
+        this.urls.set(mode, urls);
+        return urls;
       } catch (err) {
         lastError = err;
       }
@@ -171,19 +280,49 @@ export class Engine {
     throw lastError instanceof Error ? lastError : new Error("Could not download the converter engine");
   }
 
-  private async doLoad(): Promise<FFmpeg> {
+  /** Download (once) and start one core. */
+  private async start(mode: EngineMode, gen: number): Promise<FFmpeg> {
+    const urls = await this.fetchCore(mode, gen);
+    if (gen !== this.generation) throw new CancelledError();
+    this.setState({ phase: "initializing", mode, received: totalBytes(mode), total: totalBytes(mode), error: null });
+    const { FFmpeg } = await import("@ffmpeg/ffmpeg");
+    const ff = new FFmpeg();
+    ff.on("log", ({ message }) => this.handleLog(message));
+    ff.on("progress", () => this.onActivity?.(null));
     try {
-      const urls = await this.fetchCore();
-      this.setState({ phase: "initializing", error: null });
-      const { FFmpeg } = await import("@ffmpeg/ffmpeg");
-      const ff = new FFmpeg();
-      ff.on("log", ({ message }) => this.handleLog(message));
-      await ff.load(urls);
+      const loading = ff.load(urls);
+      await (mode === "mt" ? withTimeout(loading, MT_LOAD_TIMEOUT_MS, "Multi-threaded engine timed out") : loading);
+    } catch (err) {
+      ff.terminate();
+      throw err;
+    }
+    if (gen !== this.generation) {
+      ff.terminate();
+      throw new CancelledError();
+    }
+    return ff;
+  }
+
+  private async doLoad(gen: number): Promise<FFmpeg> {
+    const mode = this.effectiveMode;
+    try {
+      let ff: FFmpeg;
+      try {
+        ff = await this.start(mode, gen);
+      } catch (err) {
+        if (mode !== "mt" || err instanceof CancelledError || gen !== this.generation) throw err;
+        // Multi-thread failed: fall back to the single-thread core and say so.
+        this.mtFailed = true;
+        this.setState({ notice: MT_FALLBACK_NOTICE });
+        ff = await this.start("st", gen);
+      }
       this.ffmpeg = ff;
       this.setState({ phase: "ready" });
       return ff;
     } catch (err) {
-      this.setState({ phase: "error", error: err instanceof Error ? err.message : String(err) });
+      if (gen === this.generation && !(err instanceof CancelledError)) {
+        this.setState({ phase: "error", error: err instanceof Error ? err.message : String(err) });
+      }
       throw err;
     }
   }
@@ -191,13 +330,10 @@ export class Engine {
   private handleLog(message: string) {
     this.logs.push(message);
     if (this.logs.length > LOG_LIMIT) this.logs.splice(0, this.logs.length - LOG_LIMIT);
-    if (this.onLogTime) {
-      const t = parseLogTime(message);
-      if (t !== null) this.onLogTime(t);
-    }
+    this.onActivity?.(message);
   }
 
-  /** Run tasks one at a time: the core has a single file system and thread. */
+  /** Run tasks one at a time: the core has a single file system. */
   private enqueue<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task, task);
     this.queue = run.catch(() => undefined);
@@ -221,7 +357,7 @@ export class Engine {
     }
   }
 
-  /** Read duration / streams with ffprobe. Used when the browser can't decode the file. */
+  /** Read duration / streams with ffprobe. */
   probe(file: File): Promise<SourceMeta | null> {
     return this.enqueue(async () => {
       const ff = await this.load();
@@ -262,17 +398,40 @@ export class Engine {
           job.onProgress(r);
         }
       };
-      this.onLogTime = (t) => job.expectedDuration && report(t / job.expectedDuration);
+
+      // Progress from "time=" stats lines; also feeds the stall watchdog.
+      let lastActivity = Date.now();
+      let stalled = false;
+      this.onActivity = (line) => {
+        lastActivity = Date.now();
+        if (stalled) {
+          stalled = false;
+          job.onStall?.(false);
+        }
+        const t = line ? parseLogTime(line) : null;
+        if (t !== null && job.expectedDuration) report(t / job.expectedDuration);
+      };
       const onProgress = ({ progress }: { progress: number }) => {
         if (!job.expectedDuration) report(progress);
       };
       ff.on("progress", onProgress);
+      const watchdog =
+        this.state.mode === "mt" && job.onStall
+          ? setInterval(() => {
+              if (!stalled && Date.now() - lastActivity > STALL_MS) {
+                stalled = true;
+                job.onStall?.(true);
+              }
+            }, 2000)
+          : null;
 
       try {
         input = await this.stageInput(ff, job.file, inputName);
         // ffprobe's "-v error" sticks to the shared wasm instance; restore FFmpeg's default
         // level so progress lines ("time=…") and useful error details are printed.
-        const code = await ff.exec(["-hide_banner", "-loglevel", "info", ...job.buildArgs(input.path, outputPath)]);
+        let args = job.buildArgs(input.path, outputPath);
+        if (this.state.mode === "mt") args = withThreadLimit(args, MT_THREADS);
+        const code = await ff.exec(["-hide_banner", "-loglevel", "info", ...args]);
         if (code !== 0) throw new ConversionError(`FFmpeg exited with code ${code}`, this.recentLogs());
         const data = await ff.readFile(outputPath);
         if (!(data instanceof Uint8Array) || data.byteLength === 0) {
@@ -288,7 +447,8 @@ export class Engine {
         this.restart();
         throw new ConversionError(err instanceof Error ? err.message : String(err), logs);
       } finally {
-        this.onLogTime = null;
+        if (watchdog) clearInterval(watchdog);
+        this.onActivity = null;
         if (ff === this.ffmpeg) {
           ff.off("progress", onProgress);
           await Promise.allSettled([ff.deleteFile(outputPath), input?.cleanup()]);
@@ -302,17 +462,24 @@ export class Engine {
     this.restart();
   }
 
-  private restart() {
+  /** Throw away the running instance (and anything queued on it). */
+  private discard() {
     const ff = this.ffmpeg;
+    this.generation++;
     this.ffmpeg = null;
     this.loading = null;
     this.queue = Promise.resolve();
+    this.onActivity = null;
     if (ff) ff.terminate();
-    if (this.urls) {
-      this.setState({ phase: "initializing" });
+  }
+
+  private restart() {
+    this.discard();
+    if (this.urls.has(this.effectiveMode)) {
+      this.setState({ phase: "initializing", mode: this.effectiveMode });
       this.load().catch(() => undefined);
     } else {
-      this.setState({ phase: "idle" });
+      this.setState({ phase: "idle", mode: this.effectiveMode });
     }
   }
 }

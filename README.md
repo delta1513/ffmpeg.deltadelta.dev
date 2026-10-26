@@ -10,7 +10,7 @@ Live site: https://ffmpeg.deltadelta.dev
 - Shows a poster frame, size, length and resolution of the chosen file.
 - Shows progress, elapsed time and time left, with a Cancel button.
 - Previews the result and compares its size with the original.
-- **Advanced settings** (saved in the browser): quality, frame rate, trim, dimensions, colour model, audio channels and bitrate, encoding speed and rotation.
+- **Advanced settings** (saved in the browser): quality, frame rate, trim, dimensions, colour model, audio channels and bitrate, encoding speed, rotation, and an experimental **multi-threaded engine** toggle (off by default).
 - **Run this yourself**: the exact `ffmpeg` command for the current settings, ready to copy and run with FFmpeg on your computer.
 
 ## How it works
@@ -22,7 +22,13 @@ Live site: https://ffmpeg.deltadelta.dev
 
 ### Why the FFmpeg core loads from jsDelivr
 
-The single-thread core (`@ffmpeg/core@0.12.10`) is about 31 MB of WebAssembly. Cloudflare Workers static assets have a 25 MiB limit per file, so the site cannot host it. The browser downloads it once from jsDelivr (unpkg is the fallback) and caches it. The multi-thread core is not used: it needs cross-origin isolation headers, has a fixed memory limit and is less stable.
+The single-thread core (`@ffmpeg/core@0.12.10`) is about 31 MB of WebAssembly. Cloudflare Workers static assets have a 25 MiB limit per file, so the site cannot host it. The browser downloads it once from jsDelivr (unpkg is the fallback) and caches it. The single-thread core is the default because it is the most stable.
+
+### Multi-threaded engine and COOP/COEP headers
+
+`public/_headers` sends `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp` for every path. This makes the page cross-origin isolated, which enables `SharedArrayBuffer`. The multi-threaded core (`@ffmpeg/core-mt@0.12.10`, also from jsDelivr with an unpkg fallback) needs it. Both CDNs send `Cross-Origin-Resource-Policy: cross-origin`, and the fonts are self-hosted, so nothing is blocked.
+
+The toggle is disabled when the page is not cross-origin isolated (for example in `npm run dev`; use `npm run preview` to get the headers). The multi-threaded core has a fixed 1 GB memory limit and a pool of 32 worker threads, so the engine caps FFmpeg at 4 threads per stage (automatic thread counts exhaust the pool). If the core cannot start, the engine falls back to single-thread and shows a notice. If a multi-threaded run prints nothing for 30 seconds, the page suggests turning the toggle off. The copyable command is the same in both modes.
 
 WebM uses VP8 video with Vorbis audio. The Opus encoder in this core build crashes on stereo audio, so Vorbis is used instead.
 

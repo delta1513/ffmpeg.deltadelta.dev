@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowRightIcon } from "@/components/icons";
 import { useEngine } from "@/hooks/useEngine";
 import { usePersistentState } from "@/hooks/usePersistentState";
 import { useSourceFile } from "@/hooks/useSourceFile";
-import { CancelledError, ConversionError } from "@/lib/engine";
+import { CancelledError, ConversionError, multiThreadSupported } from "@/lib/engine";
 import { buildArgs, expectedDuration, type ConvertOptions } from "@/lib/ffmpeg-args";
 import { outputFileName } from "@/lib/formats";
 import { countChanged, DEFAULT_SETTINGS, getAvailability, type Settings, type SourceMeta, type Trim } from "@/lib/settings";
@@ -26,6 +26,7 @@ type Job =
   | { status: "error"; message: string; logs: string[] };
 
 const EMPTY_META: SourceMeta = {};
+const noSubscribe = () => () => {};
 
 const FRIENDLY_ERROR = "That didn’t work. The file may be damaged or too large for your browser.";
 const ENGINE_ERROR = "We couldn’t download the converter engine. Check your internet connection and try again.";
@@ -40,6 +41,15 @@ export function Converter() {
   const [job, setJob] = useState<Job>({ status: "idle" });
   const [pageDragging, setPageDragging] = useState(false);
   const jobId = useRef(0);
+  // Cross-origin isolation can't change after load; false on the server and during hydration.
+  const mtSupported = useSyncExternalStore(noSubscribe, multiThreadSupported, () => false);
+  const useMultiThread = settings.multiThread && mtSupported;
+
+  // Keep the engine on the chosen core. The drawer is locked while converting, so this never
+  // switches mid-run; the new core loads lazily on the next file or conversion.
+  useEffect(() => {
+    engine.setMode(useMultiThread ? "mt" : "st");
+  }, [engine, useMultiThread]);
 
   const meta = source?.meta ?? EMPTY_META;
   const format = resolveFormat(formatId, meta);
@@ -114,13 +124,14 @@ export function Converter() {
     const id = ++jobId.current;
     const snapshot = { file: source.file, meta: source.meta, options, format, outputName };
     const isCurrent = () => jobId.current === id;
-    setJob({ status: "running", id, phase: "engine", progress: 0, startedAt: 0, formatLabel: format.label });
+    const base = { status: "running", id, progress: 0, stalled: false, formatLabel: format.label } as const;
+    setJob({ ...base, phase: "engine", startedAt: 0 });
 
     try {
       await engine.load();
       if (!isCurrent()) return;
       const startedAt = Date.now();
-      setJob({ status: "running", id, phase: "converting", progress: 0, startedAt, formatLabel: format.label });
+      setJob({ ...base, phase: "converting", startedAt });
 
       const data = await engine.convert({
         file: snapshot.file,
@@ -129,6 +140,7 @@ export function Converter() {
         expectedDuration: expectedDuration(snapshot.options, snapshot.meta),
         onProgress: (progress) =>
           setJob((j) => (j.status === "running" && j.id === id ? { ...j, progress } : j)),
+        onStall: (stalled) => setJob((j) => (j.status === "running" && j.id === id ? { ...j, stalled } : j)),
       });
       if (!isCurrent()) return;
 
@@ -204,6 +216,7 @@ export function Converter() {
 
             <div className={styles.action}>
               {job.status === "error" && <ErrorNotice message={job.message} logs={job.logs} />}
+              {engineState.notice && useMultiThread && <p className={styles.notice}>{engineState.notice}</p>}
               {job.status === "running" ? (
                 <Progress job={job} engine={engineState} onCancel={cancel} />
               ) : (
@@ -237,6 +250,8 @@ export function Converter() {
         inputName={inputName}
         outputName={outputName}
         locked={running}
+        multiThreadSupported={mtSupported}
+        engineNotice={engineState.notice}
       />
     </section>
   );

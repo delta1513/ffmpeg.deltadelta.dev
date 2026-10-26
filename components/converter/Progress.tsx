@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { XIcon } from "@/components/icons";
+import { AlertIcon, XIcon } from "@/components/icons";
 import type { EngineState } from "@/lib/engine";
 import { formatClock } from "@/lib/format-display";
 import styles from "./Stage.module.css";
@@ -11,6 +11,8 @@ export interface RunningJob {
   progress: number;
   startedAt: number;
   formatLabel: string;
+  /** The multi-thread engine has gone quiet for a while. */
+  stalled: boolean;
 }
 
 interface ProgressProps {
@@ -82,6 +84,13 @@ export function Progress({ job, engine, onCancel }: ProgressProps) {
       >
         <span className={styles.filmbarFill} />
       </div>
+
+      {job.stalled && (
+        <p className={styles.stall} role="alert">
+          <AlertIcon size={16} />
+          Conversion seems stuck — try turning off the multi-threaded engine.
+        </p>
+      )}
 
       <div className={styles.progressFoot}>
         <p className={styles.progressNote}>Keep this tab open — everything happens on your device.</p>

@@ -206,6 +206,19 @@ export function buildArgs(
   return args;
 }
 
+/**
+ * Exec-only: cap decoder, encoder and filter threads. The multi-thread wasm
+ * core has a fixed pool of 32 workers; FFmpeg's automatic thread counts can
+ * exhaust it and crash or hang. Native FFmpeg doesn't need this, so the
+ * displayed command never includes it.
+ */
+export function withThreadLimit(args: readonly string[], threads: number): string[] {
+  const n = String(threads);
+  const i = args.indexOf("-i");
+  if (i < 0) return [...args];
+  return ["-filter_threads", n, ...args.slice(0, i), "-threads", n, ...args.slice(i, i + 2), "-threads", n, ...args.slice(i + 2)];
+}
+
 // Shell rendering ---------------------------------------------------------------
 
 const SHELL_SAFE = /^[A-Za-z0-9_@%+=.\/-]+$/;
