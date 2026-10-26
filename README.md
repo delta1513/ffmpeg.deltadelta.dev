@@ -1,28 +1,50 @@
-# [Click me for the demo](https://agentic-cloudflare-static-site-template.deltadelta.workers.dev/)
+# ffmpeg.deltadelta.dev
 
-# What is this?
+A free, private video converter that runs entirely in your browser. Drop in a video, pick a format, press **Start Conversion**, download the result. Nothing is uploaded: the conversion runs on your device with [FFmpeg](https://ffmpeg.org/) compiled to WebAssembly ([ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm)).
 
-This repo is a template that you can give to an AI agent so that you can quickly deploy static websites using a NextJS and Cloudflare Worker stack.
+Live site: https://ffmpeg.deltadelta.dev
 
-Your agent should be able to clone this repo, or use it to instantiate a new Github project for you, then guide you on how to get it deployed using Cloudflare.
+## What it does
 
-# Rationale
+- Converts to **MP4**, **WebM**, **MOV**, **MKV**, **GIF**, **MP3**, **WAV** and **M4A**.
+- Shows a poster frame, size, length and resolution of the chosen file.
+- Shows progress, elapsed time and time left, with a Cancel button.
+- Previews the result and compares its size with the original.
+- **Advanced settings** (saved in the browser): quality, frame rate, trim, dimensions, colour model, audio channels and bitrate, encoding speed and rotation.
+- **Run this yourself**: the exact `ffmpeg` command for the current settings, ready to copy and run with FFmpeg on your computer.
 
-This project is a spin-off from an internal project I built at the last company I was working at. We needed a super simple and cheap way for non-engineering staff to be able to experiment and deploy vibe-coded applications safely, and with minimal overhead to the engineering team.
+## How it works
 
-As a devops engineer, all I need to do is:
-1. Give this template to the vibe-coder
-2. Create a Cloudflare application for this repo and hook it up to a domain/Cloudflare Access
+- Next.js 16 (App Router) builds a static site (`output: "export"`). A Cloudflare Worker serves the files in `out/`.
+- `lib/ffmpeg-args.ts` is the single source of truth for FFmpeg arguments. The same function builds the arguments for the in-browser run and for the copyable command.
+- `lib/engine.ts` loads the FFmpeg core, queues jobs, reports progress and cancels jobs. Input files are mounted read-only (WORKERFS), so they are not copied into WebAssembly memory.
+- `@ffmpeg/ffmpeg` is only loaded with dynamic `import()` in the browser, never during the static build.
 
-# Limitations
+### Why the FFmpeg core loads from jsDelivr
 
-This repo is meant to be an exceptionally lean implementation of this type of workflow, so the only sites you can deploy here must be static. For example, with the NextJS directive `output: "export"`.
+The single-thread core (`@ffmpeg/core@0.12.10`) is about 31 MB of WebAssembly. Cloudflare Workers static assets have a 25 MiB limit per file, so the site cannot host it. The browser downloads it once from jsDelivr (unpkg is the fallback) and caches it. The multi-thread core is not used: it needs cross-origin isolation headers, has a fixed memory limit and is less stable.
 
-# How to use
+WebM uses VP8 video with Vorbis audio. The Opus encoder in this core build crashes on stereo audio, so Vorbis is used instead.
 
-> You can send this repo to your agent. If necessary, just point it to the AGENTS.md file.
+## Project layout
 
-1. Set up the connection between Github and Cloudflare. This can be done by going to the Cloudflare Web console > Workers > Create application > Github. Then follow the prompts.
-2. Create a new Github repo by using this as a template.
-3. Go to the Cloudflare Web console > Workers > Create application > Github, and then pick your new repo.
-4. Follow the prompts, then enable the workers domain and your application will be live at `.workers.dev`!
+| Path | Purpose |
+| --- | --- |
+| `app/` | Layout, home page, 404 page, global styles and design tokens |
+| `components/converter/` | Drop zone, format picker, progress, result, error, advanced drawer |
+| `components/ui/` | Sliders, trim slider, segmented controls, selects, switches |
+| `hooks/` | Engine state, chosen file, persisted settings |
+| `lib/` | Formats, settings, argument builder, engine, browser media probe |
+| `public/llms.txt` | Site summary for AI agents |
+
+## Development
+
+```sh
+npm install
+npm run dev      # local dev server
+npm run lint     # ESLint
+npm run build    # static site in out/
+npm run preview  # build, then serve out/ with wrangler dev
+```
+
+Cloudflare builds and deploys the site on every push to `main`. See `AGENTS.md` for the deployment rules.

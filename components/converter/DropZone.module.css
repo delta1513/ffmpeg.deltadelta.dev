@@ -1,0 +1,289 @@
+.zone {
+  --zone-border: rgba(255, 255, 255, 0.16);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-width: 0;
+  padding: 26px 14px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 179, 92, 0.06), transparent 60%),
+    rgba(4, 3, 10, 0.35);
+  box-shadow: inset 0 0 0 1px var(--border);
+  overflow: hidden;
+  isolation: isolate;
+  transition: box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out);
+}
+
+/* Dashed frame inside the sprocket strips */
+.zone::before {
+  content: "";
+  position: absolute;
+  inset: 24px 12px;
+  border: 1.5px dashed var(--zone-border);
+  border-radius: 12px;
+  pointer-events: none;
+  transition: border-color 260ms var(--ease-out);
+}
+
+.zone[data-has-file]::before {
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Shimmer sweep, shown while dragging */
+.zone::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgba(77, 226, 255, 0.12) 45%, rgba(247, 198, 107, 0.14) 55%, transparent 70%);
+  background-size: 250% 100%;
+  opacity: 0;
+  transition: opacity 260ms var(--ease-out);
+}
+
+.zone[data-drag] {
+  --zone-border: rgba(77, 226, 255, 0.5);
+}
+
+.zone[data-drag="over"] {
+  --zone-border: var(--cyan);
+  box-shadow:
+    inset 0 0 0 1px rgba(77, 226, 255, 0.5),
+    0 0 0 4px rgba(77, 226, 255, 0.12),
+    0 0 60px -10px rgba(77, 226, 255, 0.45);
+}
+
+.zone[data-drag]::after {
+  opacity: 1;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 120% 0;
+  }
+  to {
+    background-position: -120% 0;
+  }
+}
+
+/* Film-strip sprocket holes along the top and bottom edges */
+.sprockets {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='24'%3E%3Crect x='8' y='7' width='10' height='10' rx='2.5' fill='%23fff' fill-opacity='0.13'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: center;
+  pointer-events: none;
+}
+
+.sprockets[data-edge="top"] {
+  top: 0;
+}
+
+.sprockets[data-edge="bottom"] {
+  bottom: 0;
+}
+
+.zone[data-drag] .sprockets {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='24'%3E%3Crect x='8' y='7' width='10' height='10' rx='2.5' fill='%234de2ff' fill-opacity='0.45'/%3E%3C/svg%3E");
+  animation: roll 0.9s linear infinite;
+}
+
+@keyframes roll {
+  to {
+    background-position-x: calc(50% + 26px);
+  }
+}
+
+/* Empty state ----------------------------------------------------------------- */
+.target {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 300px;
+  margin: 0;
+  padding: 28px 16px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  text-align: center;
+  cursor: pointer;
+}
+
+@media (max-width: 560px) {
+  .target {
+    min-height: 220px;
+  }
+}
+
+.target:focus-visible {
+  outline-offset: -2px;
+}
+
+.targetIcon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 10px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(247, 198, 107, 0.18), rgba(255, 138, 61, 0.08));
+  box-shadow: inset 0 0 0 1px rgba(247, 198, 107, 0.35), 0 12px 30px -12px rgba(255, 138, 61, 0.6);
+  color: var(--gold);
+  transition: transform 300ms var(--ease-out), box-shadow 300ms var(--ease-out);
+}
+
+.target:hover .targetIcon,
+.zone[data-drag] .targetIcon {
+  transform: translateY(-3px);
+  box-shadow: inset 0 0 0 1px rgba(247, 198, 107, 0.55), 0 18px 40px -12px rgba(255, 138, 61, 0.75);
+}
+
+.targetTitle {
+  font-family: var(--font-display-stack);
+  font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.7rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.targetSub {
+  color: var(--muted);
+}
+
+.target:hover .targetSub {
+  color: var(--text);
+}
+
+.targetHint {
+  margin-top: 14px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--subtle);
+}
+
+/* Selected file ---------------------------------------------------------------- */
+.selected {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 10px 8px 6px;
+  min-width: 0;
+}
+
+.poster {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #07060d;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 20px 40px -20px rgba(0, 0, 0, 0.9);
+}
+
+.poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: fadeIn 400ms var(--ease-out);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}
+
+.posterPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.28);
+  background: radial-gradient(circle at 50% 40%, rgba(139, 108, 255, 0.12), transparent 70%);
+}
+
+.posterShimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.durationBadge {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(5, 4, 10, 0.75);
+  backdrop-filter: blur(6px);
+  font-family: var(--font-mono-stack);
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+.fileInfo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 16px;
+  min-width: 0;
+}
+
+.fileText {
+  min-width: 0;
+}
+
+.fileName {
+  overflow: hidden;
+  font-family: var(--font-display-stack);
+  font-weight: 600;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fileMeta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+}
+
+.reading {
+  color: var(--subtle);
+}
+
+.fileInfo :global(.link-btn) {
+  flex: none;
+  margin-top: 2px;
+}
+
+.warning {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 179, 92, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 179, 92, 0.25);
+  color: #ffd9a8;
+  font-size: 0.85rem;
+}
+
+.warning svg {
+  flex: none;
+  margin-top: 2px;
+}
