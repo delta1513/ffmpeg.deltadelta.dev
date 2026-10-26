@@ -92,12 +92,13 @@ export function Result({ result, onConvertAnother, onAdjust }: ResultProps) {
             </div>
           </dl>
 
-          <a className={`btn btn-primary btn-lg ${styles.download}`} href={result.url} download={result.name}>
-            <DownloadIcon size={20} />
-            <span className={styles.downloadText}>
-              Download <span className={styles.downloadName}>{result.name}</span>
-            </span>
-          </a>
+          <div className={styles.downloadWrap}>
+            <a className={`btn btn-primary btn-lg ${styles.download}`} href={result.url} download={result.name}>
+              <DownloadIcon size={20} />
+              Download {result.format.label}
+            </a>
+            <p className={styles.downloadName}>Saves as {result.name}</p>
+          </div>
 
           <div className={styles.resultLinks}>
             <button type="button" className="link-btn" onClick={onConvertAnother}>

@@ -455,16 +455,17 @@
   font-size: 1.08rem;
 }
 
-.downloadText {
+.downloadWrap {
   display: flex;
-  gap: 0.35em;
-  min-width: 0;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .downloadName {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: var(--muted);
+  font-size: 0.86rem;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .resultLinks {
