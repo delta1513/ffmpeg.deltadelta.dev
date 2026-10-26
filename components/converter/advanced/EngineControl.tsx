@@ -20,8 +20,6 @@ export function EngineControl({ enabled, onChange, supported, notice }: EngineCo
     <ControlCard
       label="Multi-threaded engine"
       labelId="ctl-engine"
-      value={on ? "On · experimental" : "Off"}
-      description="May be faster on some devices, uses more memory (1 GB limit) and is experimental. Turn off if a conversion stalls."
       enabled={supported}
       reason="Not supported in this browser"
       wide

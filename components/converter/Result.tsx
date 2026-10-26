@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckIcon, DownloadIcon, RefreshIcon, SlidersIcon } from "@/components/icons";
 import type { FormatDef } from "@/lib/formats";
-import { formatBytes, formatDuration } from "@/lib/format-display";
+import { formatBytes } from "@/lib/format-display";
 import styles from "./Stage.module.css";
 
 export interface ConversionResult {
@@ -68,7 +68,6 @@ export function Result({ result, onConvertAnother, onAdjust }: ResultProps) {
           Done
         </span>
         <h2 className={styles.resultTitle}>Your {result.format.label} is ready</h2>
-        <p className={styles.resultSub}>Converted in {formatDuration(result.seconds)}, without leaving your device.</p>
       </div>
 
       <div className={styles.resultBody}>
@@ -97,7 +96,6 @@ export function Result({ result, onConvertAnother, onAdjust }: ResultProps) {
               <DownloadIcon size={20} />
               Download {result.format.label}
             </a>
-            <p className={styles.downloadName}>Saves as {result.name}</p>
           </div>
 
           <div className={styles.resultLinks}>

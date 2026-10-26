@@ -68,13 +68,6 @@
   white-space: nowrap;
 }
 
-.barHint {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 0.88rem;
-  text-align: right;
-}
-
 .chevron {
   flex: none;
   color: var(--muted);
@@ -123,18 +116,13 @@
 .toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px 16px;
   flex-wrap: wrap;
   padding: 14px 0 16px;
   border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 0.88rem;
-}
-
-.toolbar strong {
-  color: var(--text);
-  font-weight: 600;
 }
 
 .grid {
@@ -189,11 +177,6 @@
 
 .times {
   padding-bottom: 10px;
-  color: var(--subtle);
-}
-
-.note {
-  font-size: 0.8rem;
   color: var(--subtle);
 }
 
@@ -365,12 +348,6 @@
   color: #ffd7a1;
 }
 
-.commandNote {
-  margin-top: 10px;
-  font-size: 0.82rem;
-  color: var(--subtle);
-}
-
 /* Responsive ----------------------------------------------------------------------- */
 @media (max-width: 760px) {
   .grid {
@@ -385,10 +362,6 @@
 @media (max-width: 560px) {
   .bar {
     padding: 12px 14px;
-  }
-
-  .barHint {
-    display: none;
   }
 
   .chevron {

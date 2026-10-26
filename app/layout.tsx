@@ -23,7 +23,7 @@ const mono = JetBrains_Mono({
 });
 
 const description =
-  "Free, private video converter that runs entirely in your browser. Convert to MP4, WebM, MOV, MKV, GIF, MP3, WAV or M4A — your files never leave your device.";
+  "Free online video converter. Convert to MP4, WebM, MOV, MKV, GIF, MP3, WAV or M4A.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ffmpeg.deltadelta.dev"),
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   description,
   applicationName: "ffmpeg.deltadelta.dev",
   openGraph: {
-    title: "Convert any video. Right in your browser.",
+    title: "Video Converter — ffmpeg.deltadelta.dev",
     description,
     url: "https://ffmpeg.deltadelta.dev",
     siteName: "ffmpeg.deltadelta.dev",

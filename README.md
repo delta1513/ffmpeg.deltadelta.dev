@@ -1,6 +1,6 @@
 # ffmpeg.deltadelta.dev
 
-A free, private video converter that runs entirely in your browser. Drop in a video, pick a format, press **Start Conversion**, download the result. Nothing is uploaded: the conversion runs on your device with [FFmpeg](https://ffmpeg.org/) compiled to WebAssembly ([ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm)).
+A free video converter that runs in your browser. Drop in a video, pick a format, press **Start Conversion**, download the result. The conversion uses [FFmpeg](https://ffmpeg.org/) compiled to WebAssembly ([ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm)).
 
 Live site: https://ffmpeg.deltadelta.dev
 

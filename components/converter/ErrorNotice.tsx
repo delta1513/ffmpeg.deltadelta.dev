@@ -14,7 +14,6 @@ export function ErrorNotice({ message, logs }: ErrorNoticeProps) {
       </span>
       <div className={styles.errorBody}>
         <p className={styles.errorTitle}>{message}</p>
-        <p className={styles.errorHint}>You can change the settings and try again.</p>
         {logs.length > 0 && (
           <details className={styles.details}>
             <summary>Technical details</summary>

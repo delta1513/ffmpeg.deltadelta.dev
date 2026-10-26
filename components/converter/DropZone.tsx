@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type DragEvent } from "react";
-import { AlertIcon, FilmIcon, MusicIcon, UploadIcon } from "@/components/icons";
+import { AlertIcon, MusicIcon, UploadIcon, VideoIcon } from "@/components/icons";
 import { formatBytes, formatClock } from "@/lib/format-display";
 import type { SourceFile } from "@/hooks/useSourceFile";
 import styles from "./DropZone.module.css";
@@ -38,9 +38,7 @@ export function DropZone({ source, onFile, pageDragging }: DropZoneProps) {
 
   return (
     <div className={styles.zone} data-drag={state} data-has-file={source ? true : undefined} {...dragProps}>
-      <span className={styles.sprockets} data-edge="top" aria-hidden="true" />
       {source ? <SelectedFile source={source} onChange={openPicker} /> : <EmptyState onPick={openPicker} />}
-      <span className={styles.sprockets} data-edge="bottom" aria-hidden="true" />
       <input
         ref={inputRef}
         type="file"
@@ -60,15 +58,11 @@ export function DropZone({ source, onFile, pageDragging }: DropZoneProps) {
 
 function EmptyState({ onPick }: { onPick: () => void }) {
   return (
-    <button type="button" className={styles.target} onClick={onPick} aria-describedby="drop-hint">
+    <button type="button" className={styles.target} onClick={onPick}>
       <span className={styles.targetIcon} aria-hidden="true">
         <UploadIcon size={26} />
       </span>
       <span className={styles.targetTitle}>Drop a video here</span>
-      <span className={styles.targetSub}>or click to choose a file</span>
-      <span id="drop-hint" className={styles.targetHint}>
-        MP4 · MOV · MKV · WebM · AVI and more
-      </span>
     </button>
   );
 }
@@ -91,7 +85,7 @@ function SelectedFile({ source, onChange }: { source: SourceFile; onChange: () =
           <img src={poster} alt="" />
         ) : (
           <span className={styles.posterPlaceholder} aria-hidden="true">
-            {audioOnly ? <MusicIcon size={34} /> : <FilmIcon size={34} />}
+            {audioOnly ? <MusicIcon size={34} /> : <VideoIcon size={34} />}
             {!source.browserProbed && <span className={styles.posterShimmer} />}
           </span>
         )}

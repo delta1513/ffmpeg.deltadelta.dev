@@ -38,16 +38,6 @@
   letter-spacing: -0.01em;
 }
 
-.cardValue {
-  font-family: var(--font-mono-stack);
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--gold);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.cardDesc,
 .cardReason {
   margin-top: 4px;
   font-size: 0.85rem;
@@ -333,10 +323,6 @@
   transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
 }
 
-.segmented[data-stacked] .segment {
-  min-height: 54px;
-}
-
 .segment:hover:not([data-disabled]) {
   color: var(--text);
   background: rgba(255, 255, 255, 0.04);
@@ -366,16 +352,6 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.segmentSub {
-  font-size: 0.72rem;
-  line-height: 1.25;
-  color: var(--muted);
-}
-
-.segment[data-checked] .segmentSub {
-  color: rgba(247, 198, 107, 0.8);
 }
 
 /* ---------------------------------------------------------------------------

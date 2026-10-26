@@ -1,9 +1,9 @@
 "use client";
 
-import { CheckIcon } from "@/components/icons";
+import { Select } from "@/components/ui/Inputs";
 import { FORMATS, type FormatDef, type FormatId } from "@/lib/formats";
 import type { SourceMeta } from "@/lib/settings";
-import styles from "./FormatPicker.module.css";
+import styles from "./Converter.module.css";
 
 const GROUPS = [
   { id: "video", label: "Video", formats: FORMATS.filter((f) => f.group === "video") },
@@ -32,45 +32,24 @@ interface FormatPickerProps {
 
 export function FormatPicker({ value, meta, onChange }: FormatPickerProps) {
   return (
-    <fieldset className={styles.picker}>
-      <legend className={styles.title}>Convert to</legend>
-      {GROUPS.map((group) => (
-        <div key={group.id} role="group" aria-labelledby={`fmt-group-${group.id}`} className={styles.group}>
-          <p id={`fmt-group-${group.id}`} className={styles.groupLabel}>
-            {group.label}
-          </p>
-          <div className={styles.tiles}>
+    <div>
+      <label htmlFor="output-format" className={styles.title}>
+        Convert to
+      </label>
+      <Select id="output-format" value={value} onChange={(e) => onChange(e.target.value as FormatId)}>
+        {GROUPS.map((group) => (
+          <optgroup key={group.id} label={group.label}>
             {group.formats.map((f) => {
               const reason = formatUnavailableReason(f, meta);
-              const checked = f.id === value;
               return (
-                <label
-                  key={f.id}
-                  className={styles.tile}
-                  data-checked={checked || undefined}
-                  data-disabled={reason ? true : undefined}
-                  title={reason}
-                >
-                  <input
-                    type="radio"
-                    name="output-format"
-                    value={f.id}
-                    className="visually-hidden"
-                    checked={checked}
-                    disabled={Boolean(reason)}
-                    onChange={() => onChange(f.id)}
-                  />
-                  <span className={styles.name}>{f.label}</span>
-                  <span className={styles.hint}>{reason ?? f.hint}</span>
-                  <span className={styles.check} aria-hidden="true">
-                    <CheckIcon size={13} strokeWidth={3} />
-                  </span>
-                </label>
+                <option key={f.id} value={f.id} disabled={Boolean(reason)} title={reason}>
+                  {f.label}
+                </option>
               );
             })}
-          </div>
-        </div>
-      ))}
-    </fieldset>
+          </optgroup>
+        ))}
+      </Select>
+    </div>
   );
 }

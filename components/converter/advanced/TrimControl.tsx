@@ -22,7 +22,6 @@ export function TrimControl({ duration, trim, onChange, availability }: TrimCont
   const start = trim ? Math.min(trim.start, total) : 0;
   const end = trim ? Math.min(trim.end, total) : total;
   const length = Math.max(0, end - start);
-  const full = start < 0.05 && end > total - 0.05;
 
   const setStart = (v: number) => onChange({ start: Math.min(Math.max(0, v), end - GAP), end });
   const setEnd = (v: number) => onChange({ start, end: Math.max(Math.min(total, v), start + GAP) });
@@ -31,8 +30,6 @@ export function TrimControl({ duration, trim, onChange, availability }: TrimCont
     <ControlCard
       label="Trim"
       labelId="ctl-trim"
-      value={enabled ? (full ? "Whole clip" : `${formatClock(start)} – ${formatClock(end)}`) : undefined}
-      description="Keep only the part you need. Drag the handles or type a time."
       enabled={enabled}
       reason={availability.reason}
       wide

@@ -38,27 +38,10 @@ export function DimensionsControl({ settings, update, format, meta, availability
     ? presets
     : [...presets.slice(0, -1), SIZE_PRESETS.find((p) => p.id === size.preset)!, presets[presets.length - 1]];
 
-  const presetOutput = (short: number) => {
-    if (!src) return null;
-    const k = short / Math.min(src.w, src.h);
-    const even = (n: number) => Math.round(n / 2) * 2;
-    return `${even(src.w * k)}×${even(src.h * k)}`;
-  };
-
-  let value: string;
-  if (size.preset === "original") value = src ? `Original · ${src.w}×${src.h}` : "Original";
-  else if (size.preset === "custom") value = `${resolved.width}×${resolved.height || "auto"}`;
-  else {
-    const short = SIZE_PRESETS.find((p) => p.id === size.preset)?.short ?? 0;
-    value = presetOutput(short) ?? `${short}p`;
-  }
-
   return (
     <ControlCard
       label="Dimensions"
       labelId="ctl-size"
-      value={value}
-      description={isGif ? "GIFs look best small — 480 px wide is a good start." : "Smaller dimensions make a much smaller file."}
       enabled={enabled}
       reason={availability.dimensions.reason}
     >
@@ -113,7 +96,6 @@ export function DimensionsControl({ settings, update, format, meta, availability
             disabled={!enabled}
             onChange={(lockAspect) => set({ lockAspect, height: resolved.height || size.height })}
           />
-          {evenOnly && <p className={styles.note}>Sizes are rounded to even numbers for best compatibility.</p>}
         </div>
       )}
     </ControlCard>

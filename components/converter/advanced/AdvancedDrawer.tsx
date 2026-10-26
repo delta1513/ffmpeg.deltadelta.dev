@@ -62,7 +62,6 @@ export function AdvancedDrawer(props: AdvancedDrawerProps) {
         </span>
         <span className={styles.barTitle}>Advanced settings</span>
         {changedCount > 0 && <span className={styles.badge}>{changedCount} changed</span>}
-        <span className={styles.barHint}>{open ? "Hide" : "Quality, size, trim & more"}</span>
         <ChevronDownIcon size={20} className={styles.chevron} />
       </button>
 
@@ -70,9 +69,6 @@ export function AdvancedDrawer(props: AdvancedDrawerProps) {
         <div className={styles.revealInner}>
           <div className={styles.content} inert={locked}>
             <div className={styles.toolbar}>
-              <p>
-                Settings for <strong>{format.label}</strong>. They’re saved on this device.
-              </p>
               <button type="button" className="link-btn" onClick={props.onReset}>
                 Reset to defaults
               </button>

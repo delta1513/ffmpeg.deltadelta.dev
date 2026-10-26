@@ -40,8 +40,6 @@ export function QualityControl({ settings, update, format, availability }: Contr
     <ControlCard
       label="Quality"
       labelId="ctl-quality"
-      value={tech ? `${q} · ${tech}` : String(q)}
-      description="Higher quality keeps more detail and makes a bigger file."
       enabled={availability.quality.enabled}
       reason={availability.quality.reason}
     >
@@ -78,8 +76,6 @@ export function FrameRateControl({ settings, update, format, availability }: Con
     <ControlCard
       label="Frame rate"
       labelId="ctl-fps"
-      value={label(fps)}
-      description={isGif ? "Fewer frames make a smaller GIF." : "Frames per second. Original keeps your video’s rate."}
       enabled={!disabled}
       reason={availability.frameRate.reason}
     >
@@ -116,19 +112,15 @@ export function FrameRateControl({ settings, update, format, availability }: Con
 export function PixelFormatControl({ settings, update, format, availability }: ControlProps) {
   const high = availability.pixFmtHigh;
   const options: SegmentOption<PixelFormat>[] = [
-    { value: "yuv420p", label: "4:2:0", sub: "Most compatible" },
-    { value: "yuv422p", label: "4:2:2", sub: "Pro editing", disabled: !high.enabled, title: high.reason },
-    { value: "yuv444p", label: "4:4:4", sub: "Highest colour fidelity", disabled: !high.enabled, title: high.reason },
+    { value: "yuv420p", label: "4:2:0" },
+    { value: "yuv422p", label: "4:2:2", disabled: !high.enabled, title: high.reason },
+    { value: "yuv444p", label: "4:4:4", disabled: !high.enabled, title: high.reason },
   ];
   const value = effectivePixFmt(settings.pixFmt, format);
   return (
     <ControlCard
       label="Colour model"
       labelId="ctl-pixfmt"
-      value={value}
-      description={
-        availability.pixFmt.enabled && !high.enabled ? high.reason : "How much colour detail is kept. 4:2:0 plays everywhere."
-      }
       enabled={availability.pixFmt.enabled}
       reason={availability.pixFmt.reason}
     >
@@ -161,20 +153,11 @@ export function AudioControl({ settings, update, format, availability }: Control
       title: availability.audioNone.reason,
     },
   ];
-  const modeLabel = mode === "none" ? "Off" : mode === "mono" ? "Mono" : "Stereo";
-  const value =
-    mode === "none" ? "Off" : format.audio === "pcm_s16le" ? `${modeLabel} · PCM` : `${modeLabel} · ${bitrate} kbps`;
 
   return (
     <ControlCard
       label="Audio"
       labelId="ctl-audio"
-      value={value}
-      description={
-        maxBitrate < 320 && mode === "mono"
-          ? `Mono WebM audio goes up to ${maxBitrate} kbps.`
-          : "Mono halves the sound data. Higher bitrates sound clearer."
-      }
       enabled={availability.audio.enabled}
       reason={availability.audio.reason}
       wide
@@ -231,21 +214,11 @@ const SPEED_LABEL: Record<EncodingSpeed, string> = {
   smallest: "Smallest file",
 };
 
-const SPEED_TECH: Record<EncodingSpeed, { x264: string; vp8: string }> = {
-  fastest: { x264: "ultrafast", vp8: "realtime · 8" },
-  fast: { x264: "veryfast", vp8: "realtime · 5" },
-  balanced: { x264: "faster", vp8: "realtime · 3" },
-  smallest: { x264: "medium", vp8: "good · 1" },
-};
-
-export function SpeedControl({ settings, update, format, availability }: ControlProps) {
-  const tech = format.video === "libvpx" ? SPEED_TECH[settings.speed].vp8 : SPEED_TECH[settings.speed].x264;
+export function SpeedControl({ settings, update, availability }: ControlProps) {
   return (
     <ControlCard
       label="Encoding speed"
       labelId="ctl-speed"
-      value={tech}
-      description="Slower settings squeeze the file smaller at the same quality."
       enabled={availability.speed.enabled}
       reason={availability.speed.reason}
     >
@@ -271,13 +244,10 @@ const ROTATIONS: { value: Rotation; label: string }[] = [
 ];
 
 export function RotateControl({ settings, update, availability }: ControlProps) {
-  const current = ROTATIONS.find((r) => r.value === settings.rotate) ?? ROTATIONS[0];
   return (
     <ControlCard
       label="Rotate"
       labelId="ctl-rotate"
-      value={current.label}
-      description="Turn the picture if it was filmed sideways."
       enabled={availability.rotate.enabled}
       reason={availability.rotate.reason}
     >

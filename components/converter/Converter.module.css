@@ -1,5 +1,6 @@
 .wrap {
   position: relative;
+  padding-block: clamp(16px, 4vw, 48px);
 }
 
 .card {
@@ -49,6 +50,21 @@
 
 .left > * {
   flex: 1;
+}
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.title {
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-display-stack);
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .action {

@@ -1,8 +1,8 @@
 # ffmpeg.deltadelta.dev
 
-> A free, private video converter that runs entirely in the web browser. It uses FFmpeg compiled to WebAssembly, so files never leave the user's device.
+> A free video converter that runs in the web browser. It uses FFmpeg compiled to WebAssembly.
 
-The site is for people who want to convert a video without installing software or uploading files. The user drops a video on the page, picks an output format (MP4, WebM, MOV, MKV, GIF, MP3, WAV or M4A) and downloads the result. An "Advanced settings" panel adjusts quality, frame rate, trim, dimensions, colour model, audio channels and bitrate, encoding speed and rotation. The panel also shows the equivalent `ffmpeg` command, so the user can run the same conversion with FFmpeg on their own computer. The site is static: there is no server, account or upload. The FFmpeg WebAssembly core is downloaded once from the jsDelivr CDN.
+The site is for people who want to convert a video without installing software or uploading files. The user drops a video on the page, picks an output format (MP4, WebM, MOV, MKV, GIF, MP3, WAV or M4A) and downloads the result. An "Advanced settings" panel adjusts quality, frame rate, trim, dimensions, colour model, audio channels and bitrate, encoding speed and rotation. The panel also shows the equivalent `ffmpeg` command, so the user can run the same conversion with FFmpeg on their own computer. The site is static: there is no server or account. The FFmpeg WebAssembly core is downloaded once from the jsDelivr CDN.
 
 ## Pages
 

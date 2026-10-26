@@ -93,7 +93,7 @@ export function Progress({ job, engine, onCancel }: ProgressProps) {
       )}
 
       <div className={styles.progressFoot}>
-        <p className={styles.progressNote}>Keep this tab open — everything happens on your device.</p>
+        <p className={styles.progressNote}>Keep this tab open until it finishes.</p>
         <button type="button" className="btn" onClick={onCancel}>
           <XIcon size={16} />
           Cancel

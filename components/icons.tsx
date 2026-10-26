@@ -23,10 +23,10 @@ function Icon({ size = 20, children, ...rest }: IconProps & { children: React.Re
   );
 }
 
-export const FilmIcon = (p: IconProps) => (
+export const VideoIcon = (p: IconProps) => (
   <Icon {...p}>
-    <rect x="3" y="3" width="18" height="18" rx="2.5" />
-    <path d="M7 3v18M17 3v18M3 7.5h4M17 7.5h4M3 12h18M3 16.5h4M17 16.5h4" />
+    <rect x="3" y="6" width="13" height="12" rx="2.5" />
+    <path d="m16 10.5 5-3v9l-5-3" />
   </Icon>
 );
 
@@ -78,13 +78,6 @@ export const DownloadIcon = (p: IconProps) => (
   </Icon>
 );
 
-export const ShieldIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />
-    <path d="m9 12 2 2 4-4" />
-  </Icon>
-);
-
 export const AlertIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M12 3.5 2.5 20h19L12 3.5Z" />
@@ -111,13 +104,6 @@ export const RefreshIcon = (p: IconProps) => (
     <path d="M4 4v4h4" />
     <path d="M4 13a8 8 0 0 0 14.3 4.9L20 16" />
     <path d="M20 20v-4h-4" />
-  </Icon>
-);
-
-export const LockIcon = (p: IconProps) => (
-  <Icon {...p}>
-    <rect x="5" y="11" width="14" height="9" rx="2" />
-    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </Icon>
 );
 

@@ -10,7 +10,6 @@ import styles from "./ui.module.css";
 export interface SegmentOption<T extends string | number> {
   value: T;
   label: ReactNode;
-  sub?: string;
   disabled?: boolean;
   title?: string;
 }
@@ -33,13 +32,11 @@ export function Segmented<T extends string | number>({
   disabled,
   ...aria
 }: SegmentedProps<T>) {
-  const stacked = options.some((o) => o.sub);
   return (
     <div
       role="radiogroup"
       aria-labelledby={aria["aria-labelledby"]}
       className={styles.segmented}
-      data-stacked={stacked || undefined}
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       {options.map((o) => {
@@ -63,7 +60,6 @@ export function Segmented<T extends string | number>({
               onChange={() => onChange(o.value)}
             />
             <span className={styles.segmentLabel}>{o.label}</span>
-            {o.sub && <span className={styles.segmentSub}>{o.sub}</span>}
           </label>
         );
       })}

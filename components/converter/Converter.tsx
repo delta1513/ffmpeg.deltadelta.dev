@@ -211,25 +211,20 @@ export function Converter() {
               </div>
               <div className={styles.right}>
                 <FormatPicker value={format.id} meta={meta} onChange={setFormatId} />
+                <button type="button" className={stage.start} disabled={!source || running} onClick={start}>
+                  Start Conversion
+                  <ArrowRightIcon size={22} />
+                </button>
               </div>
             </div>
 
-            <div className={styles.action}>
-              {job.status === "error" && <ErrorNotice message={job.message} logs={job.logs} />}
-              {engineState.notice && useMultiThread && <p className={styles.notice}>{engineState.notice}</p>}
-              {job.status === "running" ? (
-                <Progress job={job} engine={engineState} onCancel={cancel} />
-              ) : (
-                <>
-                  <button type="button" className={stage.start} disabled={!source} onClick={start}>
-                    Start Conversion
-                    {source && <span className={stage.startTarget}>→ {format.label}</span>}
-                    <ArrowRightIcon size={22} />
-                  </button>
-                  {!source && <p className={stage.startCaption}>Choose a file to begin.</p>}
-                </>
-              )}
-            </div>
+            {(job.status === "error" || job.status === "running" || (engineState.notice && useMultiThread)) && (
+              <div className={styles.action}>
+                {job.status === "error" && <ErrorNotice message={job.message} logs={job.logs} />}
+                {engineState.notice && useMultiThread && <p className={styles.notice}>{engineState.notice}</p>}
+                {job.status === "running" && <Progress job={job} engine={engineState} onCancel={cancel} />}
+              </div>
+            )}
           </>
         )}
       </div>

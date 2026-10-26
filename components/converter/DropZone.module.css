@@ -5,7 +5,7 @@
   flex-direction: column;
   min-height: 100%;
   min-width: 0;
-  padding: 26px 14px;
+  padding: 14px;
   border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 80% at 50% 0%, rgba(255, 179, 92, 0.06), transparent 60%),
@@ -16,11 +16,11 @@
   transition: box-shadow 260ms var(--ease-out), background-color 260ms var(--ease-out);
 }
 
-/* Dashed frame inside the sprocket strips */
+/* Dashed drop frame */
 .zone::before {
   content: "";
   position: absolute;
-  inset: 24px 12px;
+  inset: 12px;
   border: 1.5px dashed var(--zone-border);
   border-radius: 12px;
   pointer-events: none;
@@ -67,37 +67,6 @@
   }
   to {
     background-position: -120% 0;
-  }
-}
-
-/* Film-strip sprocket holes along the top and bottom edges */
-.sprockets {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='24'%3E%3Crect x='8' y='7' width='10' height='10' rx='2.5' fill='%23fff' fill-opacity='0.13'/%3E%3C/svg%3E");
-  background-repeat: repeat-x;
-  background-position: center;
-  pointer-events: none;
-}
-
-.sprockets[data-edge="top"] {
-  top: 0;
-}
-
-.sprockets[data-edge="bottom"] {
-  bottom: 0;
-}
-
-.zone[data-drag] .sprockets {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='24'%3E%3Crect x='8' y='7' width='10' height='10' rx='2.5' fill='%234de2ff' fill-opacity='0.45'/%3E%3C/svg%3E");
-  animation: roll 0.9s linear infinite;
-}
-
-@keyframes roll {
-  to {
-    background-position-x: calc(50% + 26px);
   }
 }
 
@@ -155,21 +124,6 @@
   font-size: clamp(1.35rem, 1.1rem + 0.9vw, 1.7rem);
   font-weight: 600;
   letter-spacing: -0.02em;
-}
-
-.targetSub {
-  color: var(--muted);
-}
-
-.target:hover .targetSub {
-  color: var(--text);
-}
-
-.targetHint {
-  margin-top: 14px;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  color: var(--subtle);
 }
 
 /* Selected file ---------------------------------------------------------------- */

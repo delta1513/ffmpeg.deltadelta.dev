@@ -83,7 +83,6 @@ export function CommandBlock({ args, inputName, outputName }: CommandBlockProps)
           ))}
         </code>
       </pre>
-      <p className={styles.commandNote}>Works with FFmpeg installed on your computer.</p>
     </section>
   );
 }
